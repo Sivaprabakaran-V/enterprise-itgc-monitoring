@@ -1,222 +1,200 @@
-# Silver Layer – Intermediate Transformation & Control Logic
+Silver Intermediate Layer
+Overview
 
-## Overview
+The Silver Intermediate Layer contains transformed and standardized datasets derived from the Bronze (staging) layer.
 
-The **Silver Layer** represents the intermediate transformation stage of the Enterprise ITGC Monitoring platform.
+In this layer, raw operational data is cleaned, normalized, and enriched to create consistent intermediate models that are ready for downstream analytics and compliance monitoring.
 
-In this layer, raw operational logs from the Bronze layer are **cleaned, standardized, validated, and enriched** to create reliable datasets that can be used for control monitoring and compliance analytics.
+These models form the core transformation layer in the ITGC monitoring pipeline and provide structured datasets used by the Gold (mart) layer to generate compliance insights and control exception reporting.
 
-While the Bronze layer focuses on preserving raw data, the Silver layer introduces **data quality improvements and security control logic**.
+Architecture Context
+Raw Source Data
+      │
+      ▼
+Bronze Layer (Staging)
+Raw ingestion models
+      │
+      ▼
+Silver Layer (Intermediate)
+Data cleansing + normalization
+      │
+      ▼
+Gold Layer (Marts)
+ITGC control monitoring & analytics
+Key Responsibilities of Silver Layer
 
-This layer forms the foundation for downstream compliance analytics in the Gold layer.
+The Silver layer performs the following transformations:
 
----
+1. Data Standardization
 
-# Role of the Silver Layer in the Data Architecture
+Normalize column naming conventions
 
-The platform follows a **Medallion Architecture (Bronze → Silver → Gold)** where each layer progressively improves data quality and usability.
+Ensure consistent data types
 
-```text
-Bronze Layer
-Raw operational logs
-        ↓
-Silver Layer
-Cleaned and standardized datasets
-        ↓
-Gold Layer
-Compliance monitoring & reporting
-```
+Standardize timestamps and identifiers
 
-The Silver layer is responsible for converting raw logs into **trusted, structured datasets** suitable for analytical processing.
+2. Data Cleansing
 
-In modern data platforms, this layer typically performs **data validation, deduplication, schema enforcement, and normalization** before the data is used for business logic or reporting. ([c-sharpcorner.com][1])
+Remove invalid or duplicate records
 
----
+Handle null or missing values
 
-# Security Focus – Control Logic Implementation
+Apply basic validation logic
 
-From a security and compliance perspective, the Silver layer introduces the **logic required to evaluate IT General Controls (ITGC)**.
+3. Data Enrichment
 
-Operational logs are filtered and transformed to identify events relevant to security monitoring.
+Combine related datasets
 
-Examples of control logic implemented in this layer include:
+Derive additional attributes
 
-### Access Management Monitoring
+Generate control evaluation fields
 
-Access provisioning logs are analyzed to determine whether user access requests have been approved properly.
+4. Business Logic Implementation
 
-Example control logic:
+Apply ITGC control logic
 
-```
-If request_status != 'Approved'
-→ Flag potential control exception
-```
+Standardize operational datasets for governance monitoring
 
-This helps identify cases where access may have been provisioned without proper authorization.
+Models in This Layer
+Access Provisioning
 
----
+Processes user access provisioning events and prepares datasets used to monitor access management controls.
 
-### Privileged Account Monitoring
+Typical fields:
 
-Privileged access registers are processed to identify:
+employee_id
 
-* unregistered privileged accounts
-* duplicate privileged assignments
-* accounts missing ownership information
+system_name
 
-This supports governance of high-risk administrative privileges.
+privileged_role
 
----
+approval_status
 
-### Change Management Validation
+approval_date
 
-Change management records are analyzed to verify whether deployments are linked to valid change tickets.
+review_due_date
 
-Example logic:
+Purpose:
 
-```
-Deployment event
-   ↓
-Check corresponding change_ticket_id
-   ↓
-If ticket missing → control exception
-```
+Identify unauthorized provisioning
 
-This helps enforce **segregation of duties and proper change approval workflows**.
+Validate approval workflow compliance
 
----
+Track privileged access lifecycle
 
-### Backup Monitoring
+Change Management
 
-Backup job logs are processed to identify failed or incomplete backup operations.
+Transforms raw change ticket data to enable ITGC change management monitoring.
 
-Example control logic:
+Typical fields:
 
-```
-backup_status != 'SUCCESS'
-→ Potential backup control violation
-```
+ticket_id
 
-Monitoring these events ensures that disaster recovery controls are functioning correctly.
+change_type
 
----
+created_at
 
-# Data Engineering Focus – Data Standardization
+approved_at
 
-The Silver layer applies several data engineering transformations to improve data quality and consistency.
+deployment_ts
 
-Typical transformations implemented in this layer include:
+approval_status
 
-### Data Normalization
+Purpose:
 
-Different operational systems often generate logs in varying formats.
+Ensure proper change approvals
 
-The Silver layer standardizes:
+Track deployment timelines
 
-* column names
-* data types
-* timestamp formats
-* status values
+Detect unauthorized or emergency changes
 
-This ensures that datasets from multiple sources can be reliably joined and analyzed.
+Exception Tracking
 
----
+Processes identified control violations and prepares structured records for compliance monitoring.
 
-### Deduplication
+Typical fields:
 
-Duplicate log records can occur due to:
+control_id
 
-* retry mechanisms
-* batch processing overlaps
-* ingestion errors
+domain
 
-Deduplication logic ensures that only unique operational events are retained.
+severity
 
----
+finding_detail
 
-### Null Handling
+remediation_sla_days
 
-Missing values are handled using rules such as:
+days_open
 
-* replacing null timestamps with ingestion timestamps
-* flagging records with missing control identifiers
-* excluding incomplete records from compliance calculations
+Purpose:
 
----
+Track control violations
 
-### Timestamp Standardization
+Measure remediation timelines
 
-Enterprise logs may contain timestamps from multiple systems in different time zones.
+Identify SLA breaches
 
-The Silver layer standardizes timestamps into **UTC** to ensure consistency across datasets.
+Data Sources
 
-This prevents mismatches during time-based correlation of events.
+Silver models primarily consume data from the Bronze Staging Layer, including:
 
----
+Source Model	Description
+stg_access_provisioning_log	Raw access provisioning events
+stg_change_tickets	Change management ticket data
+Other staging models	Raw operational datasets
+Materialization Strategy
 
-# Models in the Silver Layer
+Most models in this layer use:
 
-The Silver layer contains intermediate models that represent standardized operational datasets.
+materialized = incremental
+incremental_strategy = merge
 
-Examples include:
+Benefits:
 
-| Model                          | Description                           |
-| ------------------------------ | ------------------------------------- |
-| stg_access_provisioning_log    | Standardized access request records   |
-| stg_change_tickets             | Processed change management records   |
-| stg_privileged_access_register | Validated privileged account register |
-| stg_backup_job_run             | Backup execution logs                 |
-| stg_incident_tickets           | Incident management records           |
+Efficient processing of large datasets
 
-These models serve as the **trusted operational datasets** used for downstream control monitoring.
+Reduced compute cost
 
----
+Faster pipeline execution
 
-# Data Lineage
+Supports near-real-time ITGC monitoring
 
-Each model in the Silver layer originates from the Bronze layer.
+Testing and Data Quality
 
-Example lineage:
+Data quality tests are applied to ensure reliability of intermediate datasets.
 
-```
-bronze_access_provisioning_log
-        ↓
-stg_access_provisioning_log
-        ↓
-mart_access_control_summary (Gold)
-```
+Typical tests include:
 
-This lineage ensures **full traceability of security monitoring data** from ingestion to final compliance reporting.
+Not Null Tests
 
----
+Unique Key Validation
 
-# Why the Silver Layer Matters for ITGC Monitoring
+Referential Integrity Checks
 
-In enterprise environments, raw operational logs cannot be used directly for compliance monitoring due to inconsistencies, duplicates, and missing data.
+Control Logic Validation
 
-The Silver layer solves these issues by:
+These tests help maintain accurate compliance monitoring outputs.
 
-* improving data quality
-* standardizing operational datasets
-* applying security control logic
-* enabling reliable compliance analytics
+Downstream Usage
 
-Without this layer, downstream reporting could produce **incorrect control assessments or misleading compliance results**.
+The outputs from the Silver layer are used by the Gold Layer to:
 
----
+Generate ITGC compliance dashboards
 
-# Summary
+Identify control violations
 
-The Silver layer acts as the **data quality and control logic engine** of the ITGC monitoring platform.
+Track remediation SLAs
 
-It transforms raw operational logs into standardized datasets that can be confidently used for compliance analytics and security monitoring.
+Produce audit-ready reports
 
-Key responsibilities of this layer include:
+Best Practices Followed
 
-* data cleansing and validation
-* deduplication and normalization
-* timestamp standardization
-* control logic implementation
-* preparation of trusted datasets for Gold layer analytics
+Modular dbt models
 
-[1]: https://www.c-sharpcorner.com/article/how-medallion-architecture-transforms-your-data-strategy/?utm_source=chatgpt.com "How Medallion Architecture Transforms Your Data Strategy"
+Incremental processing
+
+Reusable transformation logic
+
+Clear separation of staging and business logic
+
+Audit-friendly data structures
