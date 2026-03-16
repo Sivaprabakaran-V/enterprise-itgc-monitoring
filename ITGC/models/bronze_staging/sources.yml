@@ -1,0 +1,17 @@
+sources:
+  - name: staging
+    database: ITGC  
+    schema: staging  
+    tables:
+      - name: ACCESS_PROVISIONING
+      - name: BACKUP_JOB
+      - name: BATCH_JOB_RUN
+      - name: CHANGE_TICKETS
+      - name: DEPLOYMENT
+      - name: HR_EVENTS
+      - name: INCIDENT_TICKETS
+      - name: PRIVILEGED_ACCESS_REGISTER
+      - name: RESTORATION_TEST
+
+      
+      

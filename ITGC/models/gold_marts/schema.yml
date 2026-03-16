@@ -1,0 +1,126 @@
+version: 2
+
+models:
+
+  # ── mart_itgc_control_results ──────────────────────────────
+  - name: mart_itgc_control_results
+    description: >
+      Unified table of all ITGC control test results across all 4 domains.
+      One row per control test per event. Powers all downstream marts
+      and Snowsight dashboard tiles.
+
+    columns:
+      - name: test_result_id
+        description: Surrogate key — MD5 hash of control_id + event_key
+        tests:
+          - unique
+          - not_null
+
+      - name: control_id
+        description: ITGC control identifier e.g. AC-1, CM-2, OPS-1
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['AC-1','AC-2','AC-3',
+                       'CM-1','CM-2','CM-3',
+                       'OPS-1','OPS-2',
+                       'BR-1','BR-2']
+
+      - name: domain
+        description: ITGC domain this control belongs to
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Access Management','Change Management',
+                       'IT Operations','Backup and Recovery']
+
+      - name: test_result
+        description: Outcome of the control test — PASS, WARN or FAIL
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PASS','WARN','FAIL']
+
+      - name: severity
+        description: Risk severity — only populated for FAIL and WARN rows
+        tests:
+          - accepted_values:
+              values: ['Critical','High','Medium']
+
+      - name: event_key
+        description: Primary key of the source event being tested
+        tests:
+          - not_null
+
+      - name: event_timestamp
+        description: When the source event occurred
+        tests:
+          - not_null
+
+      - name: tested_at
+        description: When dbt processed this control test
+        tests:
+          - not_null
+
+  # ── mart_control_exceptions ────────────────────────────────
+  - name: mart_control_exceptions
+    description: >
+      Filtered view of all FAIL and WARN control results only.
+      Used for exception management, remediation tracking,
+      and SLA breach alerting.
+
+    columns:
+      - name: test_result_id
+        description: Surrogate key — joins to mart_itgc_control_results
+        tests:
+          - unique
+          - not_null
+
+      - name: test_result
+        description: Only FAIL and WARN rows exist in this mart
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['FAIL','WARN']
+
+      - name: severity_rank
+        description: Numeric rank for sorting — 1=Critical, 2=High, 3=Medium
+        tests:
+          - not_null
+
+      - name: days_open
+        description: Days elapsed since exception was first detected
+        tests:
+          - not_null
+
+      - name: remediation_sla_days
+        description: Target days to remediate based on severity
+        tests:
+          - not_null
+          - accepted_values:
+              values: [5, 15, 30, 60]
+
+  # ── mart_kri_summary ───────────────────────────────────────
+  - name: mart_kri_summary
+    description: >
+      Aggregated KRI metrics at domain, control, and overall level.
+      Powers executive dashboard tiles and Audit Committee reporting.
+      Materialized as table — full refresh on every run.
+
+    columns:
+      - name: summary_level
+        description: Aggregation level — DOMAIN, CONTROL, or OVERALL
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['DOMAIN','CONTROL','OVERALL']
+
+      - name: pass_rate_pct
+        description: Percentage of tests passing — 0 to 100
+        tests:
+          - not_null
+
+      - name: total_tests
+        description: Total number of control tests at this level
+        tests:
+          - not_null
