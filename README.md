@@ -250,7 +250,7 @@ Potential improvements for the platform include:
 
 **Sivaprabakaran V**
 
-Information Security Professional with interests in:
+Data Engineer Professional with interests in:
 
 * Security analytics
 * Data engineering
