@@ -63,6 +63,91 @@ This architecture enables scalable processing of enterprise operational logs whi
 
 ---
 
+# End-to-End Data Flow Example
+
+To demonstrate how the platform transforms raw operational logs into compliance monitoring insights, the following example shows how a single access provisioning event flows through the data pipeline.
+
+This walkthrough highlights how the system converts raw security logs into structured datasets used for ITGC monitoring.
+
+---
+
+## Step 1 — Bronze Layer (Raw Security Log)
+
+The Bronze layer stores raw operational logs with minimal transformation.  
+This ensures that the original events are preserved for audit traceability and forensic analysis.
+
+Example record:
+
+```
+request_id,user_id,access_type,status,created_at
+REQ908,U102,Database Access,Pending,2025-02-11
+REQ908,U102,Database Access,Approved,2025-02-12
+```
+
+Key characteristics of the Bronze layer:
+
+- Raw log ingestion
+- No business logic applied
+- Preserves original operational events
+- Ensures log fidelity for audit purposes
+
+---
+
+## Step 2 — Silver Layer (Control Logic Processing)
+
+The Silver layer standardizes the raw data and applies control validation logic.
+
+Example transformed record:
+
+```
+request_id,user_id,access_type,approved_flag,request_timestamp
+REQ908,U102,Database Access,TRUE,2025-02-12
+```
+
+Transformations applied in this layer include:
+
+- Data normalization
+- Deduplication of events
+- Timestamp standardization
+- Status consolidation
+
+Security control logic determines whether the access request received valid approval.
+
+---
+
+## Step 3 — Gold Layer (Compliance Monitoring)
+
+The Gold layer aggregates the control outcomes into compliance monitoring datasets used by security and audit teams.
+
+Example output:
+
+```
+control_id,control_name,exception_flag
+AC-01,Access Provisioning Approval,FALSE
+```
+
+This result indicates that the access provisioning control operated effectively because the request received proper approval.
+
+---
+
+# End-to-End Pipeline Flow
+
+```
+Raw Access Logs
+        ↓
+Bronze Layer
+(Raw Operational Events)
+        ↓
+Silver Layer
+(Control Logic Processing)
+        ↓
+Gold Layer
+(Compliance Monitoring Metrics)
+```
+
+This pipeline demonstrates how enterprise operational logs can be transformed into structured datasets used for **continuous ITGC monitoring and audit reporting**.
+Example datasets can be found in the sample_data folder.
+
 # Real-World Use Case
 
 In enterprise environments, security and compliance teams must continuously validate whether IT General Controls are operating effectively.
